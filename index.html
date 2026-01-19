@@ -82,7 +82,6 @@
 
         .chat-room-bg { 
             flex: 1; 
-            /* Background akan diganti via JavaScript saat buka chat */
             background-size: cover; 
             background-position: center;
             display: flex; flex-direction: column; overflow: hidden;
@@ -92,9 +91,8 @@
         .chat-box { flex: 1; padding: 15px 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
         
         .msg { max-width: 75%; padding: 10px 15px; border-radius: 15px; font-size: 0.95rem; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-wrap: break-word;}
-        .msg img { width: 100%; max-width: 300px; border-radius: 10px; margin-top: 5px; display: block; }
+        .msg img { width: 100%; max-width: 300px; border-radius: 10px; margin-top: 5px; display: block; cursor: pointer; }
         .sender-tag { font-size: 0.75rem; font-weight: bold; margin-bottom: 3px; display: block; }
-        /* Bubble chat dibuat sedikit transparan agar wallpaper terlihat */
         .bot { background: rgba(255, 255, 255, 0.95); align-self: flex-start; border-top-left-radius: 2px; }
         .user { background: rgba(255, 222, 222, 0.95); align-self: flex-end; border-top-right-radius: 2px; }
 
@@ -104,6 +102,22 @@
         .input-area { display: flex; align-items: center; gap: 12px; }
         .input-field { flex: 1; background: #f0f0f0; border-radius: 30px; padding: 12px 20px; border: none; outline: none; font-size: 1rem; }
         .send-btn { background: var(--minnie-pink); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: none; cursor: pointer; }
+
+        /* --- ZOOM LIGHTBOX STYLE --- */
+        #lightbox {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center;
+            overflow: hidden; touch-action: none;
+        }
+        #lightbox img { 
+            max-width: 90%; max-height: 90%; object-fit: contain; 
+            transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); 
+            cursor: zoom-in;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        .close-zoom { position: absolute; top: 30px; right: 30px; color: white; font-size: 40px; z-index: 2001; cursor: pointer; opacity: 0.8; }
+        .close-zoom:hover { opacity: 1; }
 
         /* --- FIREWORKS LAYER --- */
         #fireworks-layer { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 100; }
@@ -119,7 +133,6 @@
         #final-screen { 
             display: none; 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            /* FOTO BACKGROUND PALING LUAR */
             background-image: url('images/happy.png'); 
             background-size: cover;
             background-position: center;
@@ -145,21 +158,31 @@
             margin: 0 auto 25px; background: #eee;
         }
         
-        /* FOTO DI DALAM LINGKARAN */
         .photo-frame img { width: 100%; height: 100%; object-fit: cover; }
 
-        @media (orientation: landscape) and (max-height: 500px) {
-            .wa-header-chat { height: 50px; }
-            .profile-pic { width: 40px; height: 40px; }
-            .msg img { max-width: 180px; }
-            .photo-frame { width: 100px; height: 100px; }
-            .final-card { padding: 20px; }
+        /* --- PENYESUAIAN LANDSCAPE --- */
+        @media (orientation: landscape) {
+            .phone-screen { height: 100%; }
+            .wa-header-chat { height: 55px; padding: 5px 20px; }
+            .chat-box { padding: 10px 20px; }
+            .chat-footer { padding: 5px 20px; }
+            .photo-frame { width: 110px; height: 110px; margin-bottom: 10px; }
+            .final-card { padding: 15px; width: 90%; max-width: 450px; border-radius: 25px; }
+            .final-card h1 { font-size: 1.6rem !important; margin: 0; }
+            .final-card p { font-size: 0.8rem; margin: 5px 0; }
+            .final-card button { padding: 10px 25px; margin-top: 10px; font-size: 0.8rem; }
+            .msg img { max-width: 200px; }
         }
 
         @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);} 40% {transform: translateX(-50%) translateY(-15px);} }
     </style>
 </head>
 <body>
+
+<div id="lightbox" onclick="closeZoom()">
+    <span class="close-zoom" onclick="closeZoom()">&times;</span>
+    <img id="zoom-img" src="" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="handleImageClick(event)">
+</div>
 
 <div class="phone-screen">
     <div id="home-screen" style="display: flex; flex-direction: column; height: 100%;">
@@ -266,12 +289,106 @@
 
     let currentMode = '';
     let groupStep = 0; 
-    let personalStep = 0; // KODE BARU: step untuk chat personal
+    let personalStep = 0; 
     let particles = [];
     let rockets = [];
     let canInteract = false;
     let sequenceQueue = [];
     let bgInterval;
+
+    // --- LOGIKA ZOOM & DRAG LIGHTBOX ---
+    const lightbox = document.getElementById('lightbox');
+    const zoomImg = document.getElementById('zoom-img');
+    let isZoomed = false;
+    let lastTap = 0;
+
+    // Variabel untuk Dragging
+    let isDragging = false;
+    let startX, startY;
+    let translateX = 0, translateY = 0;
+    let lastTranslateX = 0, lastTranslateY = 0;
+
+    function openZoom(src) {
+        zoomImg.src = src;
+        lightbox.style.display = 'flex';
+        resetZoomState();
+    }
+
+    function closeZoom() {
+        lightbox.style.display = 'none';
+        resetZoomState();
+    }
+
+    function resetZoomState() {
+        isZoomed = false;
+        translateX = 0; translateY = 0;
+        lastTranslateX = 0; lastTranslateY = 0;
+        zoomImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        updateTransform();
+        zoomImg.style.cursor = 'zoom-in';
+    }
+
+    function updateTransform() {
+        const scale = isZoomed ? 2.5 : 1;
+        zoomImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+
+    function handleImageClick(event) {
+        event.stopPropagation();
+        const now = new Date().getTime();
+        const timesince = now - lastTap;
+
+        if (timesince < 300 && timesince > 0) {
+            // DOUBLE TAP
+            if (!isZoomed) {
+                isZoomed = true;
+                zoomImg.style.cursor = 'grab';
+            } else {
+                resetZoomState();
+            }
+            updateTransform();
+        }
+        lastTap = now;
+    }
+
+    // Fungsi Dragging
+    function startDrag(e) {
+        if (!isZoomed) return;
+        isDragging = true;
+        zoomImg.style.transition = 'none'; // Matikan transisi saat drag agar smooth
+        zoomImg.style.cursor = 'grabbing';
+        
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        
+        startX = clientX - translateX;
+        startY = clientY - translateY;
+
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('touchmove', drag, { passive: false });
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('touchend', endDrag);
+    }
+
+    function drag(e) {
+        if (!isDragging) return;
+        if (e.cancelable) e.preventDefault();
+
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        translateX = clientX - startX;
+        translateY = clientY - startY;
+
+        updateTransform();
+    }
+
+    function endDrag() {
+        isDragging = false;
+        zoomImg.style.cursor = 'grab';
+        window.removeEventListener('mousemove', drag);
+        window.removeEventListener('touchmove', drag);
+    }
 
     function scrollBottom() { chatBox.scrollTop = chatBox.scrollHeight; }
 
@@ -279,7 +396,7 @@
         const div = document.createElement('div');
         div.className = "msg bot";
         let content = `<span class="sender-tag ${colorClass}">${name}</span>`;
-        if(isPhoto) content += `<img src="${photoSrc}" onerror="this.src='https://via.placeholder.com/300x200?text=Foto+${name}'">`;
+        if(isPhoto) content += `<img src="${photoSrc}" onclick="openZoom(this.src)" onerror="this.src='https://via.placeholder.com/300x200?text=Foto+${name}'">`;
         if(text) content += `<span>${text}</span>`;
         div.innerHTML = content;
         chatBox.appendChild(div);
@@ -300,14 +417,11 @@
         document.getElementById('home-screen').style.display = 'none';
         document.getElementById('chat-room').style.display = 'flex';
         
-        // ELEMENT BACKGROUND ROOM CHAT
         const chatBg = document.querySelector('.chat-room-bg');
 
         if (mode === 'group') {
             document.getElementById('chat-title').innerText = "Natares Fam.ily";
             document.getElementById('header-img').src = "images/1.jpeg";
-            
-            // GANTI WALLPAPER GRUP DI SINI
             chatBg.style.backgroundImage = "url('images/10.jpeg')"; 
             
             addGroupMsg("Mistermine ♡", "Gaesss, Hari ini ada yang harus bahaia nihhh 🙊❤️", "c1");
@@ -324,18 +438,14 @@
         } else {
             document.getElementById('chat-title').innerText = "Mistermine ♡";
             document.getElementById('header-img').src = "images/2.jpeg";
-            
-            // GANTI WALLPAPER MISTERMINE DI SINI
             chatBg.style.backgroundImage = "url('images/aku.png')";
 
-            // KODE DIPERBARUI: Pesan awal personal
             addPersonalMsg("Halo Sayangku... ❤️", "bot");
             setTimeout(() => {
                 addPersonalMsg("sekali lagi Happy Birthday sayangg. semoga kamu sehat selalu, makin berkah umurnya, makin cantik, makin bahagia hidup kamu dan makin bahagia sama aku. semoga kamu makin jadi pribadi yang lebih baik, dan semua yang kamu impikan tercapai. do'ain aku ya biar bisa nikahin kamu tahun sekarang 🤗 aku sayang banget sama kamuu🎂✨🤍🤍🤍🎉🎊🪅🎁🎈", "bot");
                 hintMsg.innerText = "Balas pesan aku di atas dulu sayang..";
             }, 1000);
             
-            // Hilangkan area tombol (sesuai permintaan)
             document.getElementById('options-area').style.display = 'none';
         }
     }
@@ -370,7 +480,6 @@
                 }, 500);
             }
         } else {
-            // KODE BARU: Logika percakapan personal berbasis teks
             if(personalStep === 0) {
                 personalStep = 1;
                 setTimeout(() => {
@@ -381,7 +490,6 @@
                 if(val.toLowerCase() === "siap") {
                     personalStep = 2;
                     hintMsg.innerText = "Tunggu kejutanmu...";
-                    // Balasan 4 kali
                     setTimeout(() => {
                         addPersonalMsg("oke", "bot");
                         setTimeout(() => {
@@ -390,7 +498,6 @@
                                 addPersonalMsg("2...", "bot");
                                 setTimeout(() => {
                                     addPersonalMsg("3...", "bot");
-                                    // Pindah ke bagian akhir / kembang api
                                     setTimeout(() => {
                                         startCelebration();
                                     }, 1000);
@@ -407,20 +514,7 @@
 
     userInput.addEventListener("keypress", (e) => { if (e.key === "Enter") handleSend(); });
 
-    // Fungsi nextStep lama tetap ada tapi tidak dipanggil oleh tombol di personal chat baru
-    function nextStep() {
-        addPersonalMsg("Hari apa ya? 🙄", "user");
-        document.getElementById('options-area').innerHTML = '';
-        setTimeout(() => {
-            addPersonalMsg("Ih kok lupa! Ini kan hari ulang tahunmu! 🎉", "bot");
-            setTimeout(() => {
-                addPersonalMsg("Aku punya kejutan kembang api. Siap?", "bot");
-                document.getElementById('options-area').innerHTML = `<button style="background:var(--minnie-pink); color:white; border:none; padding:12px 30px; border-radius:30px; font-weight:600; cursor:pointer;" onclick="startCelebration()">SIAP BANGET! ❤️</button>`;
-            }, 800);
-        }, 1200);
-    }
-
-    // --- FIREWORKS JS (UNCHANGED) ---
+    // --- FIREWORKS JS ---
     function startCelebration() {
         document.getElementById('fireworks-layer').style.display = 'block';
         resize(); animate();
