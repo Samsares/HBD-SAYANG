@@ -160,7 +160,6 @@
         
         .photo-frame img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* --- PENYESUAIAN LANDSCAPE --- */
         @media (orientation: landscape) {
             .phone-screen { height: 100%; }
             .wa-header-chat { height: 55px; padding: 5px 20px; }
@@ -178,6 +177,10 @@
     </style>
 </head>
 <body>
+
+<audio id="backsound" src="lagu/bersamamu.mp3" loop></audio>
+<audio id="firework-launch" src="lagu/kembang apii.mp3" preload="auto"></audio>
+<audio id="firework-burst" src="lagu/kembang api.mp3" preload="auto"></audio>
 
 <div id="lightbox" onclick="closeZoom()">
     <span class="close-zoom" onclick="closeZoom()">&times;</span>
@@ -295,18 +298,16 @@
     let canInteract = false;
     let sequenceQueue = [];
     let bgInterval;
+    let sfxMuted = false;
+    let isSubExplosionActive = false;
 
-    // --- LOGIKA ZOOM & DRAG LIGHTBOX ---
     const lightbox = document.getElementById('lightbox');
     const zoomImg = document.getElementById('zoom-img');
     let isZoomed = false;
     let lastTap = 0;
-
-    // Variabel untuk Dragging
     let isDragging = false;
     let startX, startY;
     let translateX = 0, translateY = 0;
-    let lastTranslateX = 0, lastTranslateY = 0;
 
     function openZoom(src) {
         zoomImg.src = src;
@@ -322,10 +323,8 @@
     function resetZoomState() {
         isZoomed = false;
         translateX = 0; translateY = 0;
-        lastTranslateX = 0; lastTranslateY = 0;
         zoomImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
         updateTransform();
-        zoomImg.style.cursor = 'zoom-in';
     }
 
     function updateTransform() {
@@ -337,33 +336,21 @@
         event.stopPropagation();
         const now = new Date().getTime();
         const timesince = now - lastTap;
-
         if (timesince < 300 && timesince > 0) {
-            // DOUBLE TAP
-            if (!isZoomed) {
-                isZoomed = true;
-                zoomImg.style.cursor = 'grab';
-            } else {
-                resetZoomState();
-            }
+            isZoomed = !isZoomed;
             updateTransform();
         }
         lastTap = now;
     }
 
-    // Fungsi Dragging
     function startDrag(e) {
         if (!isZoomed) return;
         isDragging = true;
-        zoomImg.style.transition = 'none'; // Matikan transisi saat drag agar smooth
-        zoomImg.style.cursor = 'grabbing';
-        
+        zoomImg.style.transition = 'none';
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        
         startX = clientX - translateX;
         startY = clientY - translateY;
-
         window.addEventListener('mousemove', drag);
         window.addEventListener('touchmove', drag, { passive: false });
         window.addEventListener('mouseup', endDrag);
@@ -373,19 +360,15 @@
     function drag(e) {
         if (!isDragging) return;
         if (e.cancelable) e.preventDefault();
-
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
         translateX = clientX - startX;
         translateY = clientY - startY;
-
         updateTransform();
     }
 
     function endDrag() {
         isDragging = false;
-        zoomImg.style.cursor = 'grab';
         window.removeEventListener('mousemove', drag);
         window.removeEventListener('touchmove', drag);
     }
@@ -416,15 +399,13 @@
         chatBox.innerHTML = '';
         document.getElementById('home-screen').style.display = 'none';
         document.getElementById('chat-room').style.display = 'flex';
-        
         const chatBg = document.querySelector('.chat-room-bg');
 
         if (mode === 'group') {
             document.getElementById('chat-title').innerText = "Natares Fam.ily";
             document.getElementById('header-img').src = "images/1.jpeg";
             chatBg.style.backgroundImage = "url('images/10.jpeg')"; 
-            
-            addGroupMsg("Mistermine ♡", "Gaesss, Hari ini ada yang harus bahaia nihhh 🙊❤️", "c1");
+            addGroupMsg("Mistermine ♡", "Gaesss, Hari ini ada yang harus bahagia nihhh 🙊❤️", "c1");
             setTimeout(() => addGroupMsg("Alennn", "Wah iya! siapa tuh yahhh 🙊", "c2"), 500);
             setTimeout(() => addGroupMsg("Amoyy", "Bunaaaaaaaaaaaa, Happy Birthdayy yaaa. semoga buna selalu bahagia, makin cantik, makin sayang sama yayah, pokonya terbaik buat buna. I LOVE YOU ❤️", "c3"), 1000);
             setTimeout(() => addGroupMsg("Eisyyy", "Happy Birthday Bunaaaa eisy yg paling cantik paling baikk. aku sayang bunaaaa, nikah sama yayah nya cepetin ya buna biar aku bisa cepet nemenin buna di dunia 😚🤍🤭", "c4"), 1500);
@@ -439,13 +420,11 @@
             document.getElementById('chat-title').innerText = "Mistermine ♡";
             document.getElementById('header-img').src = "images/2.jpeg";
             chatBg.style.backgroundImage = "url('images/aku.png')";
-
             addPersonalMsg("Halo Sayangku... ❤️", "bot");
             setTimeout(() => {
                 addPersonalMsg("sekali lagi Happy Birthday sayangg. semoga kamu sehat selalu, makin berkah umurnya, makin cantik, makin bahagia hidup kamu dan makin bahagia sama aku. semoga kamu makin jadi pribadi yang lebih baik, dan semua yang kamu impikan tercapai. do'ain aku ya biar bisa nikahin kamu tahun sekarang 🤗 aku sayang banget sama kamuu🎂✨🤍🤍🤍🎉🎊🪅🎁🎈", "bot");
                 hintMsg.innerText = "Balas pesan aku di atas dulu sayang..";
             }, 1000);
-            
             document.getElementById('options-area').style.display = 'none';
         }
     }
@@ -455,7 +434,6 @@
         if(!val) return;
         addPersonalMsg(val, "user");
         userInput.value = '';
-
         if(currentMode === 'group') {
             if(groupStep === 0) {
                 groupStep = 1;
@@ -498,9 +476,7 @@
                                 addPersonalMsg("2...", "bot");
                                 setTimeout(() => {
                                     addPersonalMsg("3... mwaaahhhh 😚", "bot");
-                                    setTimeout(() => {
-                                        startCelebration();
-                                    }, 1000);
+                                    setTimeout(() => { startCelebration(); }, 1000);
                                 }, 1000);
                             }, 1000);
                         }, 1000);
@@ -514,31 +490,55 @@
 
     userInput.addEventListener("keypress", (e) => { if (e.key === "Enter") handleSend(); });
 
-    // --- FIREWORKS JS ---
-    function startCelebration() {
-        document.getElementById('fireworks-layer').style.display = 'block';
-        resize(); animate();
-        sequenceQueue = [
-            { text: "❤️", color: "#FF1493", fontSize: (window.innerWidth < 600 ? "120px" : "200px") },
-            { text: "HBD SAYANG", color: "#FFADAD", fontSize: (window.innerWidth < 600 ? "40px" : "60px") },
-            { text: "I LOVE YOU", color: "#FFFFFF", fontSize: (window.innerWidth < 600 ? "40px" : "60px") }
-        ];
-        processNext();
-        bgInterval = setInterval(launchBackgroundFirework, 800);
+    function playSfx(id, vol = 0.6) {
+        if(sfxMuted) return;
+        const original = document.getElementById(id);
+        const clone = original.cloneNode();
+        clone.volume = vol;
+        clone.play();
+        clone.onended = function() { clone.remove(); };
     }
 
-    function launchBackgroundFirework() {
-        const x = Math.random() * fwCanvas.width;
-        const y = Math.random() * (fwCanvas.height * 0.5);
-        rockets.push(new Rocket(x, fwCanvas.height, x, y, false));
+    function startCelebration() {
+        const audio = document.getElementById('backsound');
+        audio.play().catch(e => console.log("Audio play blocked"));
+
+        document.getElementById('fireworks-layer').style.display = 'block';
+        resize(); animate();
+
+        setTimeout(() => {
+            rockets.push(new Rocket(fwCanvas.width/2, fwCanvas.height, fwCanvas.width/2, fwCanvas.height*0.3, false));
+        }, 500);
+
+        setTimeout(() => {
+            sequenceQueue = [
+                { text: "❤️", color: "#FF1493", fontSize: (window.innerWidth < 600 ? "150px" : "250px") },
+                { text: "HBD SAYANG", color: "#FFADAD", fontSize: (window.innerWidth < 600 ? "40px" : "60px") },
+                { text: "I LOVE YOU", color: "#FFFFFF", fontSize: (window.innerWidth < 600 ? "40px" : "60px") }
+            ];
+            processNext();
+        }, 3500);
+
+        setTimeout(() => {
+            bgInterval = setInterval(() => {
+                if (!isSubExplosionActive) {
+                    const x = (Math.random() * fwCanvas.width * 0.8) + (fwCanvas.width * 0.1);
+                    const y = (Math.random() * fwCanvas.height * 0.4) + (fwCanvas.height * 0.1);
+                    // Acak antara kembang api biasa atau beranak
+                    const isSub = Math.random() > 0.5;
+                    rockets.push(new Rocket(x, fwCanvas.height, x, y, false, null, null, isSub));
+                }
+            }, 1500); 
+
+            setTimeout(() => {
+                canInteract = true;
+                document.getElementById('next-btn').style.display = 'block';
+            }, 5000); 
+        }, 7000);
     }
 
     function processNext() {
-        if (sequenceQueue.length === 0) {
-            canInteract = true;
-            document.getElementById('next-btn').style.display = 'block';
-            return;
-        }
+        if (sequenceQueue.length === 0) return;
         const item = sequenceQueue.shift();
         rockets.push(new Rocket(fwCanvas.width/2, fwCanvas.height, fwCanvas.width/2, fwCanvas.height*0.4, true, item, () => setTimeout(processNext, 1200)));
     }
@@ -546,22 +546,56 @@
     function resize() { fwCanvas.width = window.innerWidth; fwCanvas.height = window.innerHeight; }
 
     class Rocket {
-        constructor(sx, sy, tx, ty, isText, textData, onDone) {
+        constructor(sx, sy, tx, ty, isText, textData, onDone, isSub = false) {
             this.x = sx; this.y = sy; this.tx = tx; this.ty = ty;
             this.isText = isText; this.textData = textData; this.onDone = onDone;
+            this.isSub = isSub; 
             this.alive = true; this.angle = Math.atan2(ty - sy, tx - sx);
-            this.speed = isText ? 15 : Math.random() * 5 + 10;
+            this.speed = isText ? 15 : 12;
+            this.history = [];
+            playSfx('firework-launch', 0.4);
+            if(this.isSub) isSubExplosionActive = true;
         }
         update() {
+            // Sejarah posisi untuk ekor yang lembut
+            this.history.push({x: this.x, y: this.y});
+            if (this.history.length > 15) this.history.shift();
+
             this.x += Math.cos(this.angle) * this.speed;
             this.y += Math.sin(this.angle) * this.speed;
+
+            // Efek percikan api (sparks) di ekor agar lebih detail
+            if (Math.random() > 0.3) {
+                particles.push(new Particle(this.x, this.y, this.x + (Math.random()-0.5)*8, this.y + 12, "#ffdd00", false));
+            }
+
             if (Math.hypot(this.tx - this.x, this.ty - this.y) < 20) {
                 this.alive = false;
+                playSfx('firework-burst', 0.6);
                 if (this.isText) explodeText(this.textData, this.onDone);
-                else explodeShape(this.tx, this.ty);
+                else explodeShape(this.tx, this.ty, this.isSub);
             }
         }
-        draw() { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI*2); ctx.fill(); }
+        draw() {
+            // Draw Glowing Trail
+            for (let i = 0; i < this.history.length; i++) {
+                const p = this.history[i];
+                const opacity = i / this.history.length;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2 * opacity, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 180, 50, ${opacity * 0.6})`;
+                ctx.fill();
+            }
+
+            // Draw Rocket Head
+            const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 6);
+            grad.addColorStop(0, "white");
+            grad.addColorStop(1, "orange");
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     function explodeText(data, callback) {
@@ -582,68 +616,147 @@
         if(callback) callback();
     }
 
-    function explodeShape(x, y) {
-        const type = Math.floor(Math.random() * 3);
+    function explodeShape(x, y, isSub = false) {
         const color = `hsl(${Math.random()*360}, 100%, 70%)`;
-        const count = 60;
-        const scale = (window.innerWidth < 600) ? 7 : 12;
-        for (let i = 0; i < count; i++) {
-            let tx, ty;
-            const t = (i / count) * Math.PI * 2;
-            if (type === 0) {
-                tx = x + scale * (16 * Math.pow(Math.sin(t), 3));
-                ty = y - scale * (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-            } else if (type === 1) {
-                const r = (scale * 8) * (Math.abs(Math.cos(t * 2.5)) + 0.5);
-                tx = x + Math.cos(t) * r; ty = y + Math.sin(t) * r;
-            } else {
-                const r = Math.random() * (scale * 10);
-                tx = x + Math.cos(t) * r; ty = y + Math.sin(t) * r;
+        const scale = (window.innerWidth < 600) ? 6 : 10;
+
+        if (isSub) {
+            const count = 5;
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2;
+                const dist = 180 + Math.random() * 60; 
+                const tx = x + Math.cos(angle) * dist;
+                const ty = y + Math.sin(angle) * dist;
+                particles.push(new Particle(x, y, tx, ty, color, false, true));
             }
-            particles.push(new Particle(x, y, tx, ty, color, false));
+        } else {
+            const shapeType = Math.floor(Math.random() * 5); 
+            const count = 70; 
+
+            for (let i = 0; i < count; i++) {
+                const t = (i / count) * Math.PI * 2;
+                let tx, ty;
+
+                switch(shapeType) {
+                    case 0: // LOVE
+                        tx = x + scale * (16 * Math.pow(Math.sin(t), 3));
+                        ty = y - scale * (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+                        break;
+                    case 1: // KUPU-KUPU
+                        const rK = (Math.exp(Math.sin(t)) - 2 * Math.cos(4*t) + Math.pow(Math.sin((2*t-Math.PI)/24), 5)) * scale * 5;
+                        tx = x + Math.cos(t) * rK;
+                        ty = y - Math.sin(t) * rK;
+                        break;
+                    case 2: // BINTANG
+                        const rS = scale * 12 * (i % 2 === 0 ? 1 : 0.5);
+                        tx = x + Math.cos(t) * rS;
+                        ty = y + Math.sin(t) * rS;
+                        break;
+                    case 3: // EMOT KISS
+                        tx = x + scale * 10 * Math.cos(t);
+                        ty = y + scale * 5 * Math.pow(Math.sin(t), 3);
+                        break;
+                    default: // BULAT NORMAL
+                        tx = x + Math.cos(t) * scale * 10 * Math.random();
+                        ty = y + Math.sin(t) * scale * 10 * Math.random();
+                }
+                particles.push(new Particle(x, y, tx, ty, color, false));
+            }
         }
     }
 
     class Particle {
-        constructor(sx, sy, tx, ty, color, isText) {
+        constructor(sx, sy, tx, ty, color, isText, willExplodeAgain = false) {
             this.x = sx; this.y = sy; this.tx = tx; this.ty = ty;
             this.color = color; this.alpha = 1; this.state = 'move';
-            this.sustain = isText ? 100 : 40;
+            this.sustain = isText ? 100 : 30;
             this.decay = isText ? 0.01 : 0.02;
-            this.vx = (Math.random()-0.5)*2; this.vy = (Math.random()-0.5)*2;
+            this.willExplodeAgain = willExplodeAgain;
+            this.history = [];
         }
         update() {
             if (this.state === 'move') {
+                if(this.willExplodeAgain) {
+                    this.history.push({x: this.x, y: this.y});
+                    if(this.history.length > 8) this.history.shift();
+                }
+
                 this.x += (this.tx - this.x) * 0.1;
                 this.y += (this.ty - this.y) * 0.1;
-                if (Math.hypot(this.tx-this.x, this.ty-this.y) < 2) this.state = 'sustain';
+                if (Math.hypot(this.tx-this.x, this.ty-this.y) < 5) {
+                    if(this.willExplodeAgain) {
+                        this.state = 'done';
+                        playSfx('firework-burst', 0.2);
+                        explodeShape(this.x, this.y, false);
+                    } else {
+                        this.state = 'sustain';
+                    }
+                }
             } else if (this.state === 'sustain') {
                 this.sustain--; if (this.sustain <= 0) this.state = 'fall';
-            } else { this.y += 1; this.x += this.vx; this.alpha -= this.decay; }
+            } else if (this.state === 'fall') {
+                this.y += 0.8; this.alpha -= this.decay;
+            }
         }
         draw() {
-            if (this.alpha <= 0) return;
-            ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color;
-            ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2); ctx.fill(); ctx.restore();
+            if (this.alpha <= 0 || this.state === 'done') return;
+            
+            if(this.willExplodeAgain && this.history.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(this.history[0].x, this.history[0].y);
+                for(let p of this.history) ctx.lineTo(p.x, p.y);
+                ctx.strokeStyle = this.color;
+                ctx.globalAlpha = this.alpha * 0.4;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            ctx.globalAlpha = this.alpha; 
+            ctx.fillStyle = this.color;
+            ctx.beginPath(); 
+            ctx.arc(this.x, this.y, 2, 0, Math.PI*2); 
+            ctx.fill();
         }
     }
 
     function animate() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
-        rockets.forEach((r, i) => { r.update(); r.draw(); if(!r.alive) rockets.splice(i,1); });
+        ctx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+        
+        rockets.forEach((r, i) => { 
+            r.update(); r.draw(); 
+            if(!r.alive) rockets.splice(i,1); 
+        });
+
+        let hasActiveSub = false;
         for (let i = particles.length - 1; i >= 0; i--) {
-            particles[i].update(); particles[i].draw();
-            if (particles[i].alpha <= 0) particles.splice(i, 1);
+            particles[i].update(); 
+            particles[i].draw();
+            if (particles[i].willExplodeAgain) hasActiveSub = true;
+            if (particles[i].alpha <= 0 || particles[i].state === 'done') particles.splice(i, 1);
         }
+
+        if (!hasActiveSub && !rockets.some(r => r.isSub)) {
+            isSubExplosionActive = false;
+        }
+
         requestAnimationFrame(animate);
     }
 
     fwCanvas.addEventListener('mousedown', (e) => {
-        if(canInteract) rockets.push(new Rocket(fwCanvas.width/2, fwCanvas.height, e.clientX, e.clientY, false));
+        if(canInteract) {
+            // Acak kembang api biasa atau beranak saat di tap
+            const isSub = Math.random() > 0.5;
+            if (!isSubExplosionActive || !isSub) {
+                rockets.push(new Rocket(fwCanvas.width/2, fwCanvas.height, e.clientX, e.clientY, false, null, null, isSub));
+            } else {
+                // Jika sedang banyak kembang api beranak, kirim yang biasa saja agar stabil
+                rockets.push(new Rocket(fwCanvas.width/2, fwCanvas.height, e.clientX, e.clientY, false, null, null, false));
+            }
+        }
     });
 
     function showFinalScreen() {
+        sfxMuted = true;
         clearInterval(bgInterval);
         document.getElementById('fireworks-layer').style.display = 'none';
         document.getElementById('final-screen').style.display = 'flex';
